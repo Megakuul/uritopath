@@ -1,82 +1,81 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
-const char* FILEPREFIX = "file://";
+#define FILEPREFIX "file://"
+#define FILEPREFIXSIZE strlen(FILEPREFIX)
 
-int decodeURI(const char *uri, char *output, size_t outputSize) {
-    if (strncmp(uri, FILEPREFIX, strlen(FILEPREFIX)) != 0) {
-        return 1;
+char* dyn_decuri(const char *uri) {
+    // Check if the file contains a fileprefix
+    if (strncmp(uri, FILEPREFIX, FILEPREFIXSIZE) != 0) {
+        return NULL;
     }
-    size_t requiredSize = strlen(FILEPREFIX) + 1;
-    if (requiredSize > outputSize) {
-        return 1;
+    // Skip the prefix
+    uri+=FILEPREFIXSIZE;
+    // Initial allocate some mem
+    size_t cap = strlen(uri) + 1;
+    size_t ix_path = 0;
+    char* path = malloc(cap);
+    if (!path) {
+        return NULL;
     }
-    uri += strlen(FILEPREFIX);
-    outputSize -= strlen(FILEPREFIX);
-    char c;
-    while ((c = *uri) != '\0') {
-        requiredSize = 1 + 1;
-        if (requiredSize > outputSize) {
-            return 1;
+
+    for (char c; (c = *uri) != '\0'; uri++) {
+        if (ix_path + 2 >= cap) {
+            cap *= 1.5;
+            path = realloc(path, cap);
+            if (!path) {
+                return NULL;
+            }
         }
         if (c == '%') {
-            int value;
-            if (isxdigit(*(uri + 1)) && isxdigit(*(uri + 2)) && sscanf(uri + 1, "%02x", &value) == 1) {
-                requiredSize = 3 + 1;
-                if (requiredSize > outputSize) {
-                    return 1;
-                }
-                *output++ = value;
-                uri += 3;
-                outputSize -= 3;
-            } else {
-                *output++ = c;
-                uri++;
-                outputSize--;
+            int val;
+            // Checks if first and second digit is letter and then parses it (e.g. %20)
+            if (isxdigit(*(uri + 1)) && isxdigit(*(uri + 2)) && sscanf(uri + 1, "%02x", &val) == 1) {
+                *(path+ix_path) = val;
+                uri+=2;
             }
         } else if (c == '+') {
-            *output++ = ' ';
-            uri++;
-            outputSize--;
+            *(path+ix_path) = ' ';
         } else {
-            *output++ = c;
-            uri++;
-            outputSize--;
+            *(path+ix_path) = c;
         }
+        ix_path++;
     }
-    *output = '\0';
-    return 0;
+    *(path+ix_path) = '\0';
+    return path;
 }
 
-int encodePath(const char *path, char *output, size_t outputSize) {
-    size_t requiredSize = strlen(FILEPREFIX) + 1;
-    if (requiredSize > outputSize) {
-        return 1;
+char* dyn_encpath(const char* path) {
+    // Initial allocate some mem
+    size_t cap = strlen(path) + FILEPREFIXSIZE + 1;
+    // index uri is the index of the block in the uri string
+    size_t ix_uri = 0;
+    char* uri = malloc(cap);
+    if (!uri) {
+        return NULL;
     }
-    strcpy(output, FILEPREFIX);
-    output += strlen(FILEPREFIX);
-    outputSize -= strlen(FILEPREFIX);
-    char c;
-    while ((c = *path) != '\0') {
-        if (!isalnum(c) && c != '/' && c != '.') {
-            requiredSize = 3 + 1;
-            if (requiredSize > outputSize) {
-                return 1;
+    // Add Prefix
+    strcpy(uri, FILEPREFIX);
+    ix_uri += FILEPREFIXSIZE;
+    
+    for (char c; (c = *path) != '\0'; path++) {
+        if (ix_uri + 4 >= cap) {
+            cap *= 2;
+            uri = realloc(uri, cap);
+            if (!uri) {
+                return NULL;
             }
-            sprintf(output, "%%%02X", (unsigned char)c);
-            output += 3;
-            outputSize -= 3;
-        } else {
-            requiredSize = 1 + 1;
-            if (requiredSize > outputSize) {
-                return 1;
-            }
-            *output++ = c;
-            --outputSize;
         }
-        path++;
+        if (!isalnum(c) && c != '/' && c != '.') {
+            sprintf(uri+ix_uri, "%%%02X", (unsigned char)c);
+            ix_uri += 3;
+        } else {
+            *(uri + ix_uri) = c;
+            ix_uri++;
+        }
     }
-    *output = '\0';
-    return 0;
+    *(uri + ix_uri) = '\0';
+    return uri;
 }

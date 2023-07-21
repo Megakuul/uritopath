@@ -12,10 +12,10 @@ Encode Filepath as URI
 
 ```c
 const char *path = "/home/user/Documents/I use Arch BTW.txt";
-char encoded[1024];
-
-if (!encodePath(path, encoded, sizeof(encoded))) {
-    printf("%s\n", encoded);
+char *uri = dyn_encpath(path);
+if (uri) {
+    printf("%s\n", uri);
+    free(uri);
 }
 // Outputs: file:///home/user/Documents/I%20use%20Arch%20BTW.txt
 ```
@@ -24,10 +24,10 @@ Decode URI to Filepath
 
 ```c
 const char *uri = "file:///home/user/Documents/I%20use%20Arch%20BTW.txt";
-char decoded[1024];
-
-if (!decodeURI(uri, decoded, sizeof(decoded))) {
-    printf("%s\n", decoded);
+char *path = dyn_decuri(uri);
+if (path) {
+    printf("%s\n", path);
+    free(path);
 }
 // Outputs: /home/user/Documents/I use Arch BTW.txt
 ```

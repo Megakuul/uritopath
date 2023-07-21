@@ -8,22 +8,17 @@
  * to a system path like "C:\Users\User 1" or "/home/User 1"
  * 
  * @param uri URI to decode
- * @param output Output buffer
- * @param outputSize Output buffer size
- * @return Returns 0 if everything went fine and 1 if the output buffer is not large enough for the path
- * or if the file:// Prefix is missing
+ * @return Returns a pointer to the decoded uri or NULL if allocation fails or the uri is not valid fileuri
 */
-int decodeURI(const char *uri, char *output, size_t outputSize);
+char* dyn_decuri(const char *uri);
 
 /**
  * Converts a path string in format "C:\Users\User 1" or "/home/User 1"
  * into a file uri like "file://C:\Users\User%201" or "file:///home/User%201"
  * 
  * @param path Path to encode
- * @param output Output buffer
- * @param outputSize Output buffer size
- * @return Returns 0 if everything went fine and 1 if the output buffer is not large enough for the URI
+ * @return Returns a pointer to the encoded path or NULL if allocation fails
 */
-int encodePath(const char *path, char *output, size_t outputSize);
+char* dyn_encpath(const char* path);
 
 #endif
